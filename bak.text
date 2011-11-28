@@ -1,0 +1,192 @@
+// This function is called the "form builder". It builds the form.
+// Notice, it takes one argument, the $form_state
+function train_test_my_form($form, &$form_state) {
+
+  // Display page 2 if $form_state['page_num'] == 1
+  if (!empty($form_state['page_num']) && $form_state['page_num'] == 2) {
+
+//echo 'heel  form 2';
+$form = train_test_my_form_two($form, $form_state);
+
+  }
+else
+{
+
+  // Otherwise we build page 1.
+  $form_state['page_num'] = 1;
+
+
+// get a list of the swimmers
+$swimmer = swimmers ();
+
+foreach($swimmer as $user)
+{
+
+$swimmerslive[$user->uid] = $user->name; 
+
+}
+//print_r($swimmerslive);
+
+   
+    $form['swimmer_in'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Select swimming for data input'),
+
+/*'#disabled' => TRUE,
+    '#states' => array(
+      // Mark this checkbox checked if the "more_info" textarea has something
+      // in it, if it's 'filled'.
+      'checked' => array(      // Action to take: check the checkbox.
+        ':input[name="more_info"]' => array('filled' => TRUE),
+      ),
+    ),
+      */
+       '#options' => $swimmerslive,
+       '#required' => TRUE, // Added
+      
+  );
+
+$today = date("d.m.y"); 
+
+  $form['session_date'] = array(
+    '#type' => 'textfield',
+     '#default_value' => $today, 
+     //'#type' => 'hidden',
+     //'#value' => '233',
+    '#title' => t('swim date in'),
+    '#required' => TRUE, // Added
+  );
+
+$form['pool_size'] = array(
+     '#type' => 'radios',
+     '#options' => array(
+	'25' => t('25 metre'),
+	'50' => t('50 metre'),
+	),
+	'#title' => t('Swimming pool size'),
+	'#default_value' => 25,
+
+       );
+
+
+$form['session_type'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      'training'   => t('Training'),
+      'competition' => t('Competition'),
+    ),
+    '#title' => t('Please select session status'),
+     '#default_value' => 'training',
+  );
+
+  
+$form['stroke_type'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      'freestyle'   => t('Freestyle'),
+      'backcrawl' => t('Backcrawl'),
+      'butterfly'      => t('butterfly'),
+      'breaststroke' => t('Breaststroke'),
+      'im' => t('Individual Medaly'),
+    ),
+    '#title' => t('Please select a swimming stroke'),
+    	'#default_value' => 'freestyle',
+  );
+
+$form['swim_type'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      'swim' => t('Swim'),
+      'kick' => t('Kick'),
+      'race'   => t('Race'),
+      'drill' => t('Drill'),
+      'pull'      => t('Pull'),
+      'hvo' => t('HVO'),
+    ),
+    '#title' => t('Please select type of swim'),
+    	'#default_value' => 'swim',
+);
+
+$form['swim_distance'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      '25'   => t('25m'),
+      '50' => t('50m'),
+      '75'      => t('75m'),
+      '100'   => t('100m'),
+      '150' => t('150m'),
+      '200'      => t('200m'),
+      '300'   => t('300m'),
+      '400' => t('400m'),
+      '800'      => t('800m'),
+      '1500' => t('1500m'),
+      '5'   => t('5m'),
+      '10' => t('10m'),
+      '20'      => t('20m'),
+      'sto5' => t('Start to 5m'),
+      'sto10' => t('Start to 10m'),
+      'sto15' => t('Start to 15m'),
+      'turntime' => t('Turn time'),
+      '5to5' => t('5m to 5m'),
+
+
+    ),
+    '#title' => t('Please select distance being recorded'),
+    	'#default_value' => 100,
+);
+
+
+$form['split_distance'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      '25'   => t('25m'),
+      '50' => t('50m'),
+      '75'      => t('75m'),
+      '100'   => t('100m'),
+      '200' => t('200m'),
+    ),
+    '#title' => t('Please select split time intervals (if required)'),
+    	'#default_value' => 50,
+);
+
+
+ $reps = array(
+    '1' => t('One'),
+    '2' => t('Two'),
+    '3' => t('Three'),
+    '4' => t('Four'),
+    '5' => t('Five'),
+    '6' => t('Six'),
+    '7' => t('Seven'),
+    '8' => t('Eight'),
+    '9' => t('Nine'),
+    '10' => t('Ten'),
+    '12' => t('Twelve'),
+    '14' => t('Fourteen'),
+    '16' => t('Sixteen'),
+    '18' => t('Eighteen'),
+    '20' => t('Twenty')
+  );
+  
+  $form['repetitions'] = array(
+    '#type' => 'select',
+    '#options' => $reps,
+    '#title' => t('How many repetitions?'),
+  );
+
+
+ $form['next'] = array(
+    '#type' => 'submit',
+    '#value' => 'Next >>',
+    '#submit' => array('train_test_my_form_next_submit'),
+  );
+
+//drupal_set_message(t('First set form  <pre>@result</pre>',
+//  array( '@result' => print_r($form_state, TRUE))));
+
+
+
+
+}
+return $form;
+}

@@ -1,0 +1,4 @@
+name = Swimmer view of data
+description = Examples of using the Drupal Form A
+package = train test module
+core = 7.x

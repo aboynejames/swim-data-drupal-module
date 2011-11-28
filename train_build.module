@@ -1,0 +1,252 @@
+<?php
+
+/**
+ * Implements hook_permission().
+ *
+ * Since the access to our new custom pages will be granted based on
+ * special permissions, we need to define what those permissions are here.
+ * This ensures that they are available to enable on the user role
+ * administration pages.
+ */
+function train_build_permission() {
+  return array(
+    'sct build' => array(
+      'title' => t('train test form'),
+      'description' => t('Only coach can add data for now'),
+    ),
+  );
+}
+
+
+
+
+function train_build_menu() {
+  $items = array();
+  $items['sct/train_build/form'] = array(
+    'title' => t('Build set element'),
+    'description' => t('Swim Entry'),
+  // 'access callback' => TRUE,
+    'page callback' => 'train_build_form',
+    'access arguments' => array('sct build'),
+   'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+// This function gets called in the browser address bar for:
+//"http://yourhost/my_module/form" or
+//"http://yourhost/?q=my_module/form". It will generate// a page with //this form on it.
+
+function train_build_form() {
+
+  // This form calls the form builder function via the
+  // drupal_get_form() function which takes the name of this form builder
+  // function as an argument. It returns the results to display the form.
+return drupal_get_form('train_build_my_form');
+
+}
+
+/*
+function train_test_my_form() {
+  return array('#markup' => '<p>' . t('Simple page: The quick brown fox jumps over the lazy dog.') . '</p>');
+}
+*/
+
+
+
+// This function is called the "form builder". It builds the form.
+// Notice, it takes one argument, the $form_state
+function train_build_my_form($form, &$form_state) {
+
+
+  // Otherwise we build page 1.
+  $form_state['page_num'] = 1;
+
+   
+
+$today = date("d.m.y"); 
+
+  $form['session_date'] = array(
+    '#type' => 'textfield',
+     '#default_value' => $today, 
+     //'#type' => 'hidden',
+     //'#value' => '233',
+    '#title' => t('swim date in'),
+    '#required' => TRUE, // Added
+  );
+
+
+$form['set_type'] = array(
+     '#type' => 'radios',
+     '#options' => array(
+	'1' => t('warmup'),
+	'2' => t('main'),
+	'3' => t('warmdown'),
+	),
+	'#title' => t('Type of set'),
+	'#default_value' => 2,
+
+       );
+
+
+$form['pool_size'] = array(
+     '#type' => 'radios',
+     '#options' => array(
+	'25' => t('25 metre'),
+	'50' => t('50 metre'),
+	),
+	'#title' => t('Swimming pool size'),
+	'#default_value' => 25,
+
+       );
+
+
+$form['session_type'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      'training'   => t('Training'),
+      'competition' => t('Competition'),
+    ),
+    '#title' => t('Please select session status'),
+     '#default_value' => 'training',
+  );
+
+  
+$form['stroke_type'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      'freestyle'   => t('Freestyle'),
+      'backcrawl' => t('Backcrawl'),
+      'butterfly'      => t('butterfly'),
+      'breaststroke' => t('Breaststroke'),
+      'im' => t('Individual Medaly'),
+    ),
+    '#title' => t('Please select a swimming stroke'),
+    	'#default_value' => 'freestyle',
+  );
+
+$form['swim_type'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      'swim' => t('Swim'),
+      'kick' => t('Kick'),
+      'race'   => t('Race'),
+      'drill' => t('Drill'),
+      'pull'      => t('Pull'),
+      'hvo' => t('HVO'),
+    ),
+    '#title' => t('Please select type of swim'),
+    	'#default_value' => 'swim',
+);
+
+$form['swim_distance'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      '25'   => t('25m'),
+      '50' => t('50m'),
+      '75'      => t('75m'),
+      '100'   => t('100m'),
+      '150' => t('150m'),
+      '200'      => t('200m'),
+      '300'   => t('300m'),
+      '400' => t('400m'),
+      '800'      => t('800m'),
+      '1500' => t('1500m'),
+      '5'   => t('5m'),
+      '10' => t('10m'),
+      '20'      => t('20m'),
+      'sto5' => t('Start to 5m'),
+      'sto10' => t('Start to 10m'),
+      'sto15' => t('Start to 15m'),
+      'turntime' => t('Turn time'),
+      '5to5' => t('5m to 5m'),
+
+
+    ),
+    '#title' => t('Please select distance being recorded'),
+    	'#default_value' => 100,
+);
+
+
+$form['split_distance'] = array(
+    '#type' => 'radios',
+    '#options' => array(
+      '25'   => t('25m'),
+      '50' => t('50m'),
+      '75'      => t('75m'),
+      '100'   => t('100m'),
+      '200' => t('200m'),
+    ),
+    '#title' => t('Please select split time intervals (if required)'),
+    	'#default_value' => 50,
+);
+
+
+ $reps = array(
+    '1' => t('One'),
+    '2' => t('Two'),
+    '3' => t('Three'),
+    '4' => t('Four'),
+    '5' => t('Five'),
+    '6' => t('Six'),
+    '7' => t('Seven'),
+    '8' => t('Eight'),
+    '9' => t('Nine'),
+    '10' => t('Ten'),
+    '12' => t('Twelve'),
+    '14' => t('Fourteen'),
+    '16' => t('Sixteen'),
+    '18' => t('Eighteen'),
+    '20' => t('Twenty')
+  );
+  
+  $form['repetitions'] = array(
+    '#type' => 'select',
+    '#options' => $reps,
+    '#title' => t('How many repetitions?'),
+  );
+
+
+ $form['next'] = array(
+    '#type' => 'submit',
+    '#value' => 'Add set',
+    '#submit' => array('train_build_my_form_submit'),
+  );
+
+//drupal_set_message(t('First set form  <pre>@result</pre>',
+//  array( '@result' => print_r($form_state, TRUE))));
+
+return $form;
+
+}
+
+
+
+function train_build_my_form_submit($form, &$form_state)
+{
+
+ 
+  // the set can be saved
+  
+  // need to convert date to unix time or sql compatible
+  $unixtimeswim = strtotime($form_state['values']['session_date']);
+  
+  $sdatain = db_insert('set_swim')
+  ->fields(array( 'setdate', 'set_type', 'poolsize', 'session_type', 'stroke_type', 'swim_type', 'swim_distance', 'split_distance', 'reps'))
+  ->values(array(
+    'setdate' =>  $unixtimeswim,
+    'set_type' =>  $form_state['values']['set_type'],
+    'poolsize' => $form_state['values']['pool_size'],
+    'session_type' =>  $form_state['values']['session_type'],
+    'stroke_type' =>  $form_state['values']['stroke_type'],
+    'swim_type' =>  $form_state['values']['swim_type'],
+    'swim_distance' =>  $form_state['values']['swim_distance'],
+     'split_distance' =>  $form_state['values']['split_distance'],
+     'reps' =>  $form_state['values']['repetitions'],
+  ))
+  ->execute();
+  
+  $form_state['setid'] = $sdatain;  
+
+}
+
