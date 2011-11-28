@@ -298,9 +298,19 @@ $form_state['active_swimmers'] = $swimmerin;
 //print_r($form_state['active_swimmers']);
 
 // are split times required?
+if($form_state['page_values'][1]['split_distance'] == 1)
+{
+// no split required just the end time.
+$form_state['split'] = 1;
+$split = 1;
+
+}
+else
+{
 $split = $form_state['page_values'][1]['swim_distance']/$form_state['page_values'][1]['split_distance'];
 $form_state['split'] = $split;
 //echo $split.'split';
+}
 
 if(!isset($form_state['setid']))
 {

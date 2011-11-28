@@ -171,6 +171,7 @@ $form['swim_distance'] = array(
 $form['split_distance'] = array(
     '#type' => 'radios',
     '#options' => array(
+      '1'   => t('No split required'),
       '25'   => t('25m'),
       '50' => t('50m'),
       '75'      => t('75m'),
@@ -178,7 +179,7 @@ $form['split_distance'] = array(
       '200' => t('200m'),
     ),
     '#title' => t('Please select split time intervals (if required)'),
-    	'#default_value' => 50,
+    	'#default_value' => 1,
 );
 
 
