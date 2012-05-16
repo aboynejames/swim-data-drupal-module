@@ -335,7 +335,7 @@ foreach($swimmerin as $suid=>$sname)
 			$form['time_recorded'.$suid.$i] = array(
 			    '#type' => 'textfield', 
 			    '#title' => t($sname.' Split no.'.$i.' Time recorded'),
-			    '#default_value' => '0.00.00',
+			   // '#default_value' => '',
 			    '#description' => t('time split into minutes, seconds and hundredths to aid data input'),
 			    '#required' => TRUE, // Added
 			  );
@@ -483,34 +483,53 @@ $page_one_values = $form_state['page_values'][1];
  // array( '@result' => print_r($page_one_values, TRUE))));
 //drupal_set_message(t('The actual swim data entered and saved <pre>@result</pre>', array('@result' => print_r($form_state, TRUE))));
 
+
 }
+
 
 function swim_time_converta($timein)
 {
+
+//echo $timein;
 // convert the input time to a decimal
 $dectimetosave = '';
 // first split input by . and then do sums on that in the right order
  $timepieces = explode( '.' , $timein);
 //print_r($timepieces);
-foreach($timepieces as $pm=>$tvalue)
-{
 
-	if($pm == 0)
+
+if(is_array($timepieces) == 1)
+{
+	// if one, then seconds and hundreds
+	if(count($timepieces) == 1 )
 	{
-	$decon[$pm] = $tvalue * 60;
+
+	$seconds = 0;
+	$dectimetosave = $seconds.'.'.$timepieces[0];
+
 	}
-	elseif($pm ==  1)
+
+// if two, then seconds and hundreds
+	elseif(count($timepieces) == 2 )
 	{
-	$decon[$pm] = $tvalue ;
+
+	$dectimetosave =  $timepieces[0].'.' .$timepieces[1];
+
 	}
+
+	// if three then minutes, seconds and hunderdths
+	elseif(count($timepieces) == 3 )
+	{
+
+	$seconds = ($timepieces[0] * 60) + $timepieces[1] ;
+	$dectimetosave = $seconds.'.' .$timepieces[2];
+
+	}
+
 }
 
-$decsecs = array_sum($decon);
-
-$dectimetosave = $decsecs.'.'.$timepieces[2];
 
 return $dectimetosave;
-
 
 }
 
