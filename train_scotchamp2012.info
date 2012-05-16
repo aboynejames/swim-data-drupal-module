@@ -1,0 +1,4 @@
+name = Swim times  Scottish Championships 2012
+description = Examples of using the Drupal Form A
+package = train test module
+core = 7.x

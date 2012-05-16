@@ -1,0 +1,4 @@
+name = Coaches view of data
+description = Coach view of all swimming data
+package = train test module
+core = 7.x

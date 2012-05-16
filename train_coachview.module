@@ -1,0 +1,224 @@
+<?php
+
+/**
+ * Implements hook_permission().
+ *
+ * Since the access to our new custom pages will be granted based on
+ * special permissions, we need to define what those permissions are here.
+ * This ensures that they are available to enable on the user role
+ * administration pages.
+ */
+function train_coachview_permission() {
+  return array(
+    'sct coachesview' => array(
+      'title' => t('coach view of swim data '),
+      'description' => t('Only for coaches'),
+    ),
+  );
+}
+
+
+
+
+function train_coachview_menu() {
+  $items = array();
+  $items['sct/train_coachview/data'] = array(
+    'title' => t('Coaches data view'),
+    'description' => t('Coaches view'),
+  // 'access callback' => TRUE,
+    'page callback' => 'train_coachview_data',
+    'access arguments' => array('sct coachesview'),
+   'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+// This function gets called in the browser address bar for:
+//"http://yourhost/my_module/form" or
+//"http://yourhost/?q=my_module/form". It will generate// a page with //this form on it.
+/*
+function train_entry_data() {
+
+  // This form calls the form builder function via the
+  // drupal_get_form() function which takes the name of this form builder
+  // function as an argument. It returns the results to display the form.
+return drupal_get_form('train_entry_my_form');
+
+}
+*/
+
+
+
+function coachdataquery ($insuid)
+{
+
+// id of coach
+$thecoach = $insuid;
+
+// first get a list of all swimmer live on the site with data
+$query = db_select('users', 'us');
+
+$query
+//  ->condition('u.uid', 0, '<>')
+  ->fields('us', array('uid', 'name'));
+
+//$query-->fields('us', array('uid, name'));
+//print_r($query);
+$result = $query->execute();
+//print_r($resultb);
+$swimmers = $result->fetchAllKeyed(); 
+//print_r($query);
+//print_r($swimmers);
+
+unset($swimmers[0]);
+
+// given that list get each swimmers data and form array ready for presenting
+foreach($swimmers as $suid=>$sname)
+{
+
+$query = db_select('swim_data', 'sd');
+$query->condition('uid', $suid);
+$query->join('set_swim', 'ss', 'sd.setid = ss.setid');  // AND ss.setid = :ssuid', array(':ssuid' => 5))
+//->condition('setid', $setid)
+$query->fields('sd', array('repid', 'splitid', 'time_recorded', 'pulse_recorded', 'stroke_count'))
+->fields('ss', array('setid', 'setdate', 'set_type', 'poolsize', 'session_type', 'stroke_type', 'swim_type', 'swim_distance', 'split_distance'));
+
+//print_r($query);
+$resultb = $query->execute();
+//print_r($resultb);
+$setssetb = $resultb->fetchAll();//fetchobject(); 
+//print_r($query);
+//print_r($setssetb);
+
+$swimmerdatain[$suid] = $setssetb;
+//$swimmerdatain[$suid]['name'] = $sname;
+
+}
+
+
+$swimmerdatain['listswimmers']  = $swimmers;
+//print_r($swimmerdatain);
+
+
+return $swimmerdatain;
+
+}
+
+
+function train_coachview_data() {
+
+//$swimmerdata = array('#markup' => '<p>' . t('The swimmers view of the competition and training data.') . '</p>');
+
+// get the data for the table.
+// get the current userid
+$cursuid = user_uid_optional_load($uid = NULL);
+//print_r($cursuid);
+ $swimdatai = coachdataquery ($cursuid->uid);
+//print_r($swimdatai);
+
+$listswim = 1;
+// need to create table for each swimmer if all swimmers are aske for else  get one swimmer ID and display table just for that swimmer 
+// array of many swimmers
+if($listswim == 1   )
+{
+
+	$header = array('Date', 'Context', 'Set', 'Stroke', 'Swim style', 'Distance', 'Split Distance', 'Rep', 'Time', 'Pulse', 'Stroke Count');
+
+	$settype = array('1' => 'warmup', '2' => 'main', '3' => 'warmdown');
+
+
+//$swimdatai ['listswimmers'] = array('1'=>'1');
+
+//print_r($swimdatai ['listswimmers']);
+
+$counter = 1;
+
+foreach($swimdatai ['listswimmers']   as $sid=>$sname )
+	{
+//echo 'swimmerid'.$sid;
+if($sid == 1)
+{
+$cid = $counter;
+}
+else
+{
+$cid = $cid + 1;
+}
+
+$rows[$cid] = array($sname);
+		
+		foreach($swimdatai[$sid] as $rid=>$rvalue)
+		{
+//echo 'rowidvalue'.$rid;
+// need to advanc row count
+$cid = $cid + 1;
+
+		$displaydate = date("F j, Y ", $rvalue->setdate);	
+			
+		$rows[$cid] = array($displaydate, $rvalue->session_type, $settype[$rvalue->set_type], $rvalue->stroke_type,  $rvalue->swim_type, $rvalue->swim_distance, $rvalue->split_distance, $rvalue->repid, $rvalue->time_recorded, $rvalue->pulse_recorded, $rvalue->stroke_count);
+
+		}
+
+
+	}
+
+//print_r($rows);
+
+	  // Output of table with the paging
+	  $output = theme_table(
+	    array(
+	      "header" => $header,
+	      "rows" => $rows,
+	      "attributes" => array(),
+	      "sticky" => true, // Table header will be sticky
+	      "caption" => "",
+	      "colgroups" => array(),
+	      "empty" => t("Table has no row!") // The message to be displayed if table is empty
+	    )
+	  ).theme("pager");
+ 
+	
+ 
+	return $output;
+	
+
+
+}
+// else just one swimmer asked for
+else
+{
+
+	$header = array('Date', 'Context', 'Set', 'Stroke', 'Swim style', 'Distance', 'Split Distance', 'Rep', 'Time', 'Pulse', 'Stroke Count');
+
+	$settype = array('1' => 'warmup', '2' => 'main', '3' => 'warmdown');
+		
+		foreach($swimdatai as $rid=>$rvalue)
+		{
+		$displaydate = date("F j, Y ", $rvalue->setdate);	
+			
+		$rows[$rid] = array($displaydate, $rvalue->session_type, $settype[$rvalue->set_type], $rvalue->stroke_type,  $rvalue->swim_type, $rvalue->swim_distance, $rvalue->split_distance, $rvalue->repid, $rvalue->time_recorded, $rvalue->pulse_recorded, $rvalue->stroke_count);
+
+		}
+
+	  // Output of table with the paging
+	  $output = theme_table(
+	    array(
+	      "header" => $header,
+	      "rows" => $rows,
+	      "attributes" => array(),
+	      "sticky" => true, // Table header will be sticky
+	      "caption" => "",
+	      "colgroups" => array(),
+	      "empty" => t("Table has no row!") // The message to be displayed if table is empty
+	    )
+	  ).theme("pager");
+ 
+	return $output;
+
+}
+//return $swimmerdata;
+
+
+}
+
+
