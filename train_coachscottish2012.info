@@ -1,0 +1,4 @@
+name = Coaches view on scottish data 2012
+description = Examples of using the Drupal Form A
+package = train test module
+core = 7.x

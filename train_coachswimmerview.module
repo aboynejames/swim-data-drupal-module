@@ -1,0 +1,341 @@
+<?php
+
+/**
+ * Implements hook_permission().
+ *
+ * Since the access to our new custom pages will be granted based on
+ * special permissions, we need to define what those permissions are here.
+ * This ensures that they are available to enable on the user role
+ * administration pages.
+ */
+function train_coachswimmerview_permission() {
+  return array(
+    'coach swimmerview' => array(
+      'title' => t('Coach view on each swimmer'),
+      'description' => t('Coaches analysis of swimmer data'),
+    ),
+  );
+}
+
+
+
+
+function train_coachswimmerview_menu() {
+  $items = array();
+  $items['sct/train_coachswimmerview/data'] = array(
+    'title' => t('Coaches view on swimmer data'),
+    'description' => t('Coach view per swimmer'),
+  // 'access callback' => TRUE,
+    'page callback' => 'train_coachswimmerview_form',
+    'access arguments' => array('coach swimmerview'),
+   'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+
+
+function train_coachswimmerview_form() {
+
+  // This form calls the form builder function via the
+  // drupal_get_form() function which takes the name of this form builder
+  // function as an argument. It returns the results to display the form.
+return drupal_get_form('train_coachswimmerview_page');
+
+}
+
+
+function train_coachswimmerview_page($form, &$form_state) {
+
+// form list of swimmers for dropdown
+$swimmerslive = activeswimmers ();
+
+
+$num_checkboxes = !empty($form_state['values']['changethis']) ? $form_state['values']['changethis'] : 0;
+  $form = array();
+  $form['changethis'] = array(
+    '#title' => t('Please select a swimmer'),
+    '#type' => 'select',
+    '#options' => $swimmerslive,
+    '#default_value' => $num_checkboxes,
+       '#ajax' => array(
+      // #ajax has two required keys: callback and wrapper.
+      // 'callback' is a function that will be called when this element changes.
+      'callback' => 'train_coachswimmerview_page_callback',
+      // 'wrapper' is the HTML id of the page element that will be replaced.
+      'wrapper' => 'replace_textfield_div',
+      // There are also several optional keys - see ajax_example_autocheckboxes
+      // below for details on 'method', 'effect' and 'speed' and
+      // ajax_example_dependent_dropdown for 'event'.
+     ),
+  );
+
+  // This entire form element will be replaced whenever 'changethis' is updated.
+  $form['replace_textfield'] = array(
+    '#type' => 'textfield',
+    '#title' => t("Swimmer data"),
+    // The prefix/suffix provide the div that we're replacing, named by
+    // #ajax['wrapper'] above.
+    '#prefix' => '<div id="replace_textfield_div">',
+    '#suffix' => '</div>',
+  );
+
+// prepare table data
+$tabledatai = prepatetabledata($form_state['values']['changethis']);
+
+
+
+  // An AJAX request calls the form builder function for every change.
+  // We can change how we build the form based on $form_state.
+  if (!empty($form_state['values']['changethis'])) {
+//    $form['replace_textfield']['#description'] = t("Say why you chose '@value'", array('@value' => $form_state['values']['changethis']));
+    $form['replace_textfield']['#description'] = $tabledatai;
+  }
+//  return $form;
+//}
+
+
+
+
+
+
+/*
+	$form['submit'] = array(
+	'#type' => 'submit',
+	'#value' => t('Submit entry'),
+	);
+*/
+
+/*
+  drupal_set_message(t('First set form  <pre>@result</pre>',
+  array( '@result' => print_r( $form_state, TRUE))));
+*/
+
+return $form;
+	
+}
+
+
+// list of swimmers
+function activeswimmers ()
+{
+
+$query = db_select('users', 'u');
+
+$query
+//  ->condition('u.uid', 0, '<>')
+  ->fields('u', array('uid', 'name'));
+//  ->range(10, 50);
+
+$result = $query->execute();
+//print_r($result);
+$record = $result->fetchAllKeyed(); //fetchAll(); 
+//print_r($record);
+
+
+return $record;
+
+}
+
+
+// get the swim data per swimmer
+function prepatetabledata($swimid)
+{
+
+
+
+$swimdataannual =  pb_annualqueryt($swimid);
+//print_r($swimdataannual);
+
+$strokesin = $swimdataannual['strokes'];
+unset($swimdataannual['strokes']);
+
+$header = array('Date', 'Stroke', 'Distance', 'Time');
+
+$i  = 1;
+	
+	foreach($swimdataannual as $strokeid=>$ftimedist)
+	{
+	
+		foreach($ftimedist as $distance=>$ftime)
+		{
+		$displaydate = date("F j, Y ", $ftime['date']);	
+		$timeformat = dectotime($ftime['time']);
+	
+		$i = $i + 1;
+		
+		$rows[$i] = array($displaydate,  $strokesin[$strokeid],  $distance, $timeformat);
+		
+		}
+
+	}
+//print_r($rows);
+  // Output of table with the paging
+  $formt = theme_table(
+    array(
+      "header" => $header,
+      "rows" => $rows,
+      "attributes" => array(),
+      "sticky" => true, // Table header will be sticky
+      "caption" => "",
+      "colgroups" => array(),
+      "empty" => t("Table has no row!") // The message to be displayed if table is empty
+    )
+  ).theme("pager");
+ 
+	return $formt;
+
+}
+
+
+
+function pb_annualqueryt($suid) {
+
+$start2011 = 1293840000;
+$start2012 = 1325376000;
+$end2012 = 1356998400;
+
+
+//   SELECT * FROM swim_data LEFT JOIN set_swim ON swim_data.setid = set_swim.setid WHERE swim_data.uid = '1' AND set_swim.session_type = 'competition' HAVING set_swim.setdate BETWEEN '1325376000' AND '1356998400'
+
+// on an annual basis, per stroke, per distance get swim data.
+
+$query = db_select('swim_data', 'sd');
+$query->condition('uid', $suid);
+$query->condition('session_type', 'competition');
+$query->condition('setdate', array($start2012, $end2012), 'BETWEEN');
+$query->join('set_swim', 'ss', 'sd.setid = ss.setid');  // AND ss.setid = :ssuid', array(':ssuid' => 5))
+//->condition('setid', $setid)
+$query->fields('sd', array('repid', 'splitid', 'time_recorded', 'pulse_recorded', 'stroke_count'))
+->fields('ss', array('setid', 'setdate', 'set_type', 'poolsize', 'session_type', 'stroke_type', 'swim_type', 'swim_distance', 'split_distance'));
+
+//print_r($query);
+$resultb = $query->execute();
+//print_r($resultb);
+$setssetb = $resultb->fetchAll();//fetchobject(); 
+//print_r($setssetb);
+
+// stage two for each stroke and each distance find the fastest time.
+
+// competition swim distances
+$compdistance[1] = array( '25', '50', '100', '200', '400', '800', '1500' );
+$compdistance[2] = array( '25', '50' ,'100', '200');
+$compdistance[3] = array('25', '50', '100', '200');
+$compdistance[4] = array('25', '50', '100', '200');
+$compdistance[5] = array('100', '200', '400');
+//print_r($compdistance);
+$strokes = array('1'=>'freestyle', '2'=>'breaststroke', '3'=>'backcrawl', '4'=>'butterfly', '5'=>'im');
+//print_r($strokes);
+
+// loop for each stroke each distance and pick out fastest time
+foreach($strokes as $stid=>$stroke)
+{
+
+	foreach($compdistance[$stid] as $swimdist)
+	{	
+	
+	// order times and save fastest
+		foreach($setssetb as $rid=>$timedata)
+		{
+		
+			if($timedata->stroke_type == $stroke && $timedata->swim_distance == $swimdist)
+			{
+			
+			$fastannualtime[$stid][$swimdist][$timedata->splitid]['time'] = $timedata->time_recorded;
+			$fastannualtime[$stid][$swimdist][$timedata->splitid]['date'] = $timedata->setdate;
+				
+			}
+		
+		}
+	
+	
+	
+	}
+
+
+
+}
+
+//print_r($fastannualtime);
+
+// now need to order by time multiple times  (first deal with split time entries ie get total time not spilt element)
+foreach($strokes as $stid=>$stroke)
+{
+
+	foreach($compdistance[$stid] as $swimdist)
+	{
+		
+			//foreach($fastannualtime[$stid][$swimdist] as $allfastt)
+			//{
+//echo 'allfastt array';
+//print_r($fastannualtime[$stid][$swimdist]);
+				if(count($fastannualtime[$stid][$swimdist]) > 1 )
+				{
+				// sortarray slow to fast
+				arsort($fastannualtime[$stid][$swimdist]);
+//echo 'sort array slow to fast';
+//print_r($fastannualtime[$stid][$swimdist]);				
+				$quicktime[$stid][$swimdist] = array_pop($fastannualtime[$stid][$swimdist]);
+				
+				}
+				else
+				{
+				
+				$quicktime[$stid][$swimdist] = $fastannualtime[$stid][$swimdist][1];
+				
+				}
+	
+	
+			//}	
+
+	}
+	
+}
+
+//print_r($quicktime);
+$quicktime['strokes'] = $strokes;
+
+return $quicktime;
+
+}
+
+
+
+
+
+/**
+ * Callback for ajax_example_simplest.
+ *
+ * On an ajax submit, the form builder function is called again, then the $form
+ * and $form_state are passed to this callback function so it can select which
+ * portion of the form to send on to the client.
+ *
+ * @return renderable array (the textfield element)
+ */
+function train_coachswimmerview_page_callback($form, $form_state) {
+  // The form has already been submitted and updated. We can return the replaced
+  // item as it is.
+  return $form['replace_textfield'];
+}
+
+
+			
+
+
+/**
+ * Validate handler for bsrs_music_page().
+ */
+function  train_coachswimmerview_page_validate($form, &$form_state) {
+  
+}
+
+/**
+ * Submit handler .
+ */
+function  train_coachswimmerview_page_submit($form, &$form_state) {
+
+
+
+
+
+}

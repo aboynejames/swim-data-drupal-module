@@ -1,0 +1,314 @@
+<?php
+
+/**
+ * Implements hook_permission().
+ *
+ * Since the access to our new custom pages will be granted based on
+ * special permissions, we need to define what those permissions are here.
+ * This ensures that they are available to enable on the user role
+ * administration pages.
+ */
+function train_coachscottish2012_permission() {
+  return array(
+    'coach coachscottish2012' => array(
+      'title' => t('Coach view on each swimmer scottish swimmer'),
+      'description' => t('Coaches analysis of scottish champs'),
+    ),
+  );
+}
+
+
+
+
+function train_coachscottish2012_menu() {
+  $items = array();
+  $items['sct/train_coachscottish2012/data'] = array(
+    'title' => t('Coaches view on scottish champs'),
+    'description' => t('Coach view per swimmer scottish'),
+  // 'access callback' => TRUE,
+    'page callback' => 'train_coachscottish2012_form',
+    'access arguments' => array('coach coachscottish2012'),
+   'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+
+
+function train_coachscottish2012_form() {
+
+  // This form calls the form builder function via the
+  // drupal_get_form() function which takes the name of this form builder
+  // function as an argument. It returns the results to display the form.
+return drupal_get_form('train_coachscottish2012_page');
+
+}
+
+
+function train_coachscottish2012_page($form, &$form_state) {
+
+// form list of swimmers for dropdown
+$swimmerslive = activeswimmerstt ();
+
+
+$num_checkboxes = !empty($form_state['values']['changethis']) ? $form_state['values']['changethis'] : 0;
+  $form = array();
+  $form['changethis'] = array(
+    '#title' => t('Please select a swimmer'),
+    '#type' => 'select',
+    '#options' => $swimmerslive,
+    '#default_value' => $num_checkboxes,
+       '#ajax' => array(
+      // #ajax has two required keys: callback and wrapper.
+      // 'callback' is a function that will be called when this element changes.
+      'callback' => 'train_coachswimmerview_page_callback',
+      // 'wrapper' is the HTML id of the page element that will be replaced.
+      'wrapper' => 'replace_textfield_div',
+      // There are also several optional keys - see ajax_example_autocheckboxes
+      // below for details on 'method', 'effect' and 'speed' and
+      // ajax_example_dependent_dropdown for 'event'.
+     ),
+  );
+
+  // This entire form element will be replaced whenever 'changethis' is updated.
+  $form['replace_textfield'] = array(
+    '#type' => 'textfield',
+    '#title' => t("Swimmer data"),
+    // The prefix/suffix provide the div that we're replacing, named by
+    // #ajax['wrapper'] above.
+    '#prefix' => '<div id="replace_textfield_div">',
+    '#suffix' => '</div>',
+  );
+
+// prepare table data
+$tabledatai = prepatetabledatatt($form_state['values']['changethis']);
+
+
+
+  // An AJAX request calls the form builder function for every change.
+  // We can change how we build the form based on $form_state.
+  if (!empty($form_state['values']['changethis'])) {
+//    $form['replace_textfield']['#description'] = t("Say why you chose '@value'", array('@value' => $form_state['values']['changethis']));
+    $form['replace_textfield']['#description'] = $tabledatai;
+  }
+
+/*
+  drupal_set_message(t('First set form  <pre>@result</pre>',
+  array( '@result' => print_r( $form_state, TRUE))));
+*/
+
+return $form;
+	
+}
+
+
+// list of swimmers
+function activeswimmerstt ()
+{
+
+$query = db_select('users', 'u');
+
+$query
+//  ->condition('u.uid', 0, '<>')
+  ->fields('u', array('uid', 'name'));
+//  ->range(10, 50);
+
+$result = $query->execute();
+//print_r($result);
+$record = $result->fetchAllKeyed(); //fetchAll(); 
+//print_r($record);
+
+
+return $record;
+
+}
+
+
+// get the swim data per swimmer
+function prepatetabledatatt($swimid)
+{
+
+
+
+$swimdataannual =  pb_annualquerytt($swimid);
+//print_r($swimdataannual);
+
+$strokesin = $swimdataannual['strokes'];
+unset($swimdataannual['strokes']);
+
+$header = array('Date', 'Stroke', 'Distance', 'Split', 'Time', ' Diff Split', '% change');
+
+$i  = 1;
+	
+	foreach($swimdataannual as $sdataid=>$chdata)
+	{
+		$displaydate = 'April 21 2012';	
+		$timeformat = dectotimesc($chdata['splittime']);
+	
+		$i = $i + 1;
+		
+		$rows[$i] = array($displaydate,  $strokesin[$chdata['strokeid']],  $chdata['distance'], $chdata['splitid'], $timeformat, $chdata['dsplit'], $chdata['%_change'].'%');
+		
+
+	}
+//print_r($rows);
+  // Output of table with the paging
+  $formt = theme_table(
+    array(
+      "header" => $header,
+      "rows" => $rows,
+      "attributes" => array(),
+      "sticky" => true, // Table header will be sticky
+      "caption" => "",
+      "colgroups" => array(),
+      "empty" => t("Table has no row!") // The message to be displayed if table is empty
+    )
+  ).theme("pager");
+ 
+	return $formt;
+
+}
+
+
+
+function pb_annualquerytt($suid) {
+
+$query = db_select('mastersid', 'mid');
+$query->condition('uid', $suid);
+$query->fields('mid', array('mastersid'));
+//print_r($query);
+$resultb = $query->execute();
+//print_r($resultb);
+$mid = $resultb->fetchobject();
+//print_r($mid);
+//$mid->mastersid = 'PENDING';
+// query to get swimmer event and splits
+$query = db_select('tidyswimmer', 'tswim');
+$query->condition('letter', $mid->mastersid);
+$query->join('tidyevent', 'te', 'tswim.rowid = te.rowid'); 
+$query->join('tidysplits', 'ts', 'tswim.rowid = ts.rowid'); 
+$query->fields('tswim', array('rowid', 'letter'));
+$query->fields('te', array('distance', 'strokeid'));
+$query->fields('ts', array('splitid', 'splittime'));
+//print_r($query);
+$resultbc = $query->execute();
+//print_r($resultb);
+$champdata = $resultbc->fetchAll();
+//print_r($champdata);
+
+// get the splits into seperate array
+foreach($champdata as $did=>$swimperdata)
+{
+
+$rowids[$swimperdata->rowid][] = $swimperdata->splittime;
+}
+//echo 'rowandsplittimes';
+//print_r($rowids);
+
+//work out the split time value compared to the previous
+foreach($rowids as $srowid=>$accsplit)
+{
+
+	foreach($accsplit as $spid=>$sad)
+	{
+		// if first split, not diff sum to do,
+		if($spid == '0')
+		{
+		$splitdiff[$srowid][$spid] = $sad;
+		}
+		else
+		{
+		$splitdiff[$srowid][$spid] = $sad - $accsplit[$spid-1];
+		
+		}                                   
+	}
+
+}
+//echo 'thespiltsdifference';
+//print_r($splitdiff);
+
+//combine the splits array to form dat aready for table layout
+foreach($champdata as $did=>$swimperdata)
+{
+	foreach($swimperdata as $datatype=>$swvalue)
+	{
+	$chapdataready[$did][$datatype] =  $swvalue;
+
+		if($datatype == 'splitid' )
+		{
+		//current difference
+		$currsdiff = $splitdiff[$chapdataready[$did]['rowid']][($swvalue-1)] ;
+		//previsous differnce
+			if($chapdataready[$did]['splitid'] > 1 )
+			{
+			$prevsdiff = $chapdataready[$did-1]['dsplit'];
+			// percentage change
+			$perchangediff = round(((($currsdiff -$prevsdiff )/$prevsdiff)*100), 1);
+			}
+			else
+			{
+			$perchangediff ='---';
+			}
+			
+		$chapdataready[$did]['dsplit'] =  $currsdiff;
+		$chapdataready[$did]['%_change'] =  $perchangediff;
+		}
+
+	}
+
+}
+//echo 'allthedatayeehaaa';
+//print_r($chapdataready);
+
+$strokes = array('1'=>'freestyle', '2'=>'backcrawl', '3'=>'breaststroke', '4'=>'butterfly', '5'=>'im');
+
+//print_r($quicktime);
+$chapdataready['splits'] = $rowids;
+$chapdataready['strokes'] = $strokes;
+
+return $chapdataready;
+
+
+
+}
+
+
+
+
+
+/**
+ * Callback for ajax_example_simplest.
+ *
+ * On an ajax submit, the form builder function is called again, then the $form
+ * and $form_state are passed to this callback function so it can select which
+ * portion of the form to send on to the client.
+ *
+ * @return renderable array (the textfield element)
+ */
+function train_coachscottish2012_page_callback($form, $form_state) {
+  // The form has already been submitted and updated. We can return the replaced
+  // item as it is.
+  return $form['replace_textfield'];
+}
+
+
+			
+
+
+/**
+ * Validate handler for bsrs_music_page().
+ */
+function  train_coachscottish2012_page_validate($form, &$form_state) {
+  
+}
+
+/**
+ * Submit handler .
+ */
+function  train_coachscottish2012_page_submit($form, &$form_state) {
+
+
+
+
+
+}
